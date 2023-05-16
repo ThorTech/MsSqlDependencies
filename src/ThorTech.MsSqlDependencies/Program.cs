@@ -91,7 +91,13 @@ namespace ThorTech.MsSqlDependencies
                     var sprocName = reader.GetString(0);
                     var depType = reader.GetString(1);
 
-                    if (depType == "stored procedure")
+                    if (reader.GetColumnSchema().Count != 5)
+                    {
+                        // This contains dependents instead of dependencies
+                        continue;
+                    }
+                    
+                    if (depType == "stored procedure" || depType == "scalar function")
                     {
                         results.Add(sprocName);
                     }
