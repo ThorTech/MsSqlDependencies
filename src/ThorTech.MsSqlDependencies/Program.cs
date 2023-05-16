@@ -38,36 +38,36 @@ namespace ThorTech.MsSqlDependencies
 
         private static IList<StoredProcedureDependency> GetHierarchy(string connectionString, string storedProcedure)
         {
-            var depth = 0;
             var allSprocs = new Dictionary<string, StoredProcedureDependency>();
-            var readQueue = new Queue<string>();
+            var readQueue = new Queue<(string sproc, int depth)>();
             allSprocs.Add(storedProcedure, new StoredProcedureDependency
             {
-                Depth = depth, 
+                Depth = 0, 
                 Name = storedProcedure,
                 Parent = null
             });
-            readQueue.Enqueue(storedProcedure);
+            readQueue.Enqueue((storedProcedure, 0));
 
             using (var con = new SqlConnection(connectionString))
             {
                 con.Open();
 
-                while (readQueue.TryDequeue(out var sproc))
+                while (readQueue.TryDequeue(out var item))
                 {
-                    depth++;
+                    var (sproc, depth) = item;
+                    var currDepth = depth + 1;
                     var sprocs = ReadSprocs(con, sproc);
                     var dedupedSprocs = sprocs.Where(s => !allSprocs.Keys.Contains(s));
                     foreach (var dedupedSproc in dedupedSprocs)
                     {
                         var record = new StoredProcedureDependency
                         {
-                            Depth = depth,
+                            Depth = currDepth,
                             Name = dedupedSproc,
                             Parent = sproc
                         };
                         allSprocs.Add(dedupedSproc, record);
-                        readQueue.Enqueue(dedupedSproc);
+                        readQueue.Enqueue((dedupedSproc, currDepth));
                     }
                 }
                 
